@@ -126,6 +126,78 @@ The S4 application bundle can be generated using the *s4-deploy* leiningen task.
 
 > $lein bundle $DEPLOY_PATH
 
+### Running the sample application
+
+Before building and deploying the sample application, S4 must be installed in
+redbutton mode following the instructions found at the [S4
+wiki](http://wiki.s4.io/Tutorials/GettingStarted#toc1)
+
+Then we can cd into the sampleapp directory:
+
+> $ cd CLJ_S4_DIR/sampleapp
+
+We must retrieve the dependencies for the application:
+
+> $ lein deps
+
+Then we can build and deploy the application using Leiningen:
+
+> $ lein s4-deploy PATH_TO/s4image/s4_app
+
+If we check the directory for S4 apps we should be able to see a new application
+directory named *RandomNumbers*:
+
+> $ ls PATH_TO/s4image/s4_apps/RandomNumbers/
+> RandomNumbers_conf.xml  adapter_conf.xml        lib
+
+We can now start S4:
+
+> $ cd PATH_TO/s4image/bin
+> $ ./s4_start.sh
+
+We should be able to see in the output of the shell script how the RandomNumbers
+PE are registered:
+
+> [/Users/antoniogarrote/Development/Projects/s4/s4image/bin/./../s4_apps/RandomNumbers/RandomNumbers_conf.xml]
+> Adding processing element with bean name bifurcationPE, id bifurcationPe
+> adding pe: cljs4.BifurcationPE@6a69ed4a
+> Using ConMapPersister ..
+> Adding processing element with bean name OddNumsAggregatorPE, id OddNumbersAggregatorPE
+> adding pe: cljs4.NumAggregatorPE@15db4492
+> Using ConMapPersister ..
+> Adding processing element with bean name EvenNumsAggregatorPE, id EvenNumbersAggregatorPE
+> adding pe: cljs4.NumAggregatorPE@35e09eab
+> Using ConMapPersister ..
+
+Now we can start the adapter included into the RandomNumbers application:
+
+> $ cd PATH_TO/s4image/bin
+> $ ./run_adapter.sh -x -u ../s4_apps/RandomNumbers/lib/sampleapp*.jar -d
+> ../s4_apps/RandomNumbers/adapter_conf.xml
+
+After starting the adapter, we should we able to start noticing events, and
+creation of PEs related to the application.
+
+After a while, in the shell where the S4 node was started, we should be able to
+see the output from the accumulator PE:
+
+> ...
+> dispatchin to dispatcher: io.s4.dispatcher.Dispatcher@7e8905bd stream EvenNumbers event cljs4.Number@63ff5c98
+> dispatchin to dispatcher: io.s4.dispatcher.Dispatcher@7e8905bd stream EvenNumbers event cljs4.Number@5979b7b0
+> NumAgreggatorPE: Acum output: 54
+> NumAgreggatorPE: Acum output: 77
+> NumAgreggatorPE: Acum output: 82
+> NumAgreggatorPE: Acum output: 94
+> NumAgreggatorPE: Acum output: 84
+> NumAgreggatorPE: Acum output: 135
+> NumAgreggatorPE: Acum output: 162
+> NumAgreggatorPE: Acum output: 234
+> NumAgreggatorPE: Acum output: 260
+> dispatchin to dispatcher: io.s4.dispatcher.Dispatcher@7e8905bd stream OddNumbers event cljs4.Number@4ab83be0
+> NumAgreggatorPE: Acum output: 206
+> dispatchin to dispatcher: io.s4.dispatcher.Dispatcher@7e8905bd stream OddNumbers event cljs4.Number@3a87d472
+> NumAgreggatorPE: Acum output: 273
+> ...
 
 ## License
 
