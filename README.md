@@ -116,9 +116,9 @@ This task uses the information for the application that must be defined in the p
          		 [org.clojure/clojure-contrib "1.2.0"]
                          [clj-s4/clj-s4 "0.2.1"]]
        :s4-app {:name "RandomNumbers"
-       :namespace "sample.app.core"
-       :configuration ["sampleapp.wiring" "RandomNumbers"]
-       :adapters ["sampleapp.wiring" "RandomNumbersAdapter"]})
+                :namespace "sample.app.core"
+                :configuration ["sampleapp.wiring" "RandomNumbers"]
+                :adapters ["sampleapp.wiring" "RandomNumbersAdapter"]})
 
 The :s4-app key must include a map defining the name of the application, the namespace including the implementation of the PEs, adapters, etc. the namespace of the configuration including the wiring for the application and the name of the configuration file and, optionally, the namespace and file name for the wiring for a S4 adapter.
 
