@@ -9,7 +9,11 @@ A sample application project is included in the *sampleapp* directory of this pr
 ### Defining events
 
 You can define a event object that can be received by processing elements using the *def-s4-message* macro.
-The macro works in a similar way to the *deftype* macro, generating a new class with the specified name and fields, but it will also generate standard getter and setter methods so the message object can be easilly wired using Spring.
+The macro works in a similar way to the *deftype* macro, generating a new class
+with the specified name and fields, but it will also generate standard getter
+and setter methods so the message object can be easilly wired using Spring.
+*def-s4-message* also deals with some serialization issues involving the use of
+Clojure data types and the Kryo serialization library used in S4 by default.
 Messages can be built from Clojure maps and transformed back into maps using the *msg-to-map* function:
 
      ;; Generates a cljs4.tests.Msg class with fields 'foo' with type int
@@ -42,6 +46,30 @@ S4 PEs can emit new events invoking the *dispatch-event* function from the *proc
 
     ; Dispatches an event using the message class defined earlier
     (dispatch-event this stream-name (cljs4.tests.Msg. {:foo 1 :bar "test"}))
+
+### State manipulation methods
+
+Instead of using the *.state* getter to manipulate the state of a PE, the
+functions *read-state*, *write-state* and *alter-state* can be used. These
+functions offer a simpler interface for the manipulation of the PE's state:
+
+    (def-s4-pe cljs4.PosPersister [:filePath :acum :textId]
+      :init (fn [this]
+              (let [acum {}]
+                (write-state this :acum acum)))
+      :process-event [[Object] (fn [this token]
+                                 (let [token-map (msg-to-map token)]
+                                   (write-state this :textId (:textId token-map))
+                                   (alter-state this :acum
+                                                (fn [old] (let [old-count (get old (:pos token-map))]
+                                                           (if (nil? old-count) (assoc old (:pos token-map) 1)
+                                                               (assoc old (:pos token-map) (inc old-count))))))))]
+      :output (fn [this]
+                (let [ac (read-state this :acum)]
+                  (spit (str (read-state this :filePath) "/" (read-state this :textId) ".txt")
+                        (reduce str "" (map (fn [[pos count]] (str "POS: " pos "COUNT: " count " \r\n"))
+                                            (read-state this :acum)))))))
+
 
 ### Defining adapters
 
@@ -134,7 +162,7 @@ wiki](http://wiki.s4.io/Tutorials/GettingStarted#toc1)
 
 Then we can cd into the sampleapp directory:
 
-> $ cd CLJ_S4_DIR/sampleapp
+> $ cd CLJ_S4_DIR/sampleapps/random-numbers
 
 We must retrieve the dependencies for the application:
 
@@ -198,6 +226,9 @@ see the output from the accumulator PE:
 > dispatchin to dispatcher: io.s4.dispatcher.Dispatcher@7e8905bd stream OddNumbers event cljs4.Number@3a87d472
 > NumAgreggatorPE: Acum output: 273
 > ...
+
+A different sample application dealing with the distributed POS-tagging of texts
+can be found in the *wordcount* subdirectory of the *sampleapps* directory.
 
 ## License
 

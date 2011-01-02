@@ -1,5 +1,6 @@
 (ns clj-s4.core
-  (:require [clojure.contrib.logging :as logging]))
+  (:require [clojure.contrib.logging :as logging])
+  (:use [clj-s4.genclass]))
 
 (defn capitalize
   ([text]
@@ -10,10 +11,37 @@
              rs (.substring text 1 l)]
          (str (.toUpperCase fs) rs)))))
 
+(defn minimalize
+  ([text]
+     (if (= "" text)
+       text
+       (let [fs (.substring text 0 1)
+             l   (.length text)
+             rs (.substring text 1 l)]
+         (str (.toLowerCase fs) rs)))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Processing Elements
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn read-state
+  "Returns the value of the state of a property in a PE."
+  ([pe property]
+     (property (deref (.state pe)))))
+
+(defn alter-state
+  "Alters the state for a property of a PE"
+  ([pe property update-fn]
+     (dosync (alter (.state pe)
+                    (fn [old-state]
+                      (let [new-state-prop (update-fn (property old-state))]
+                        (assoc old-state property new-state-prop)))))))
+
+(defn write-state
+  "Sets the state for a property in a PE"
+  ([pe property value]
+     (dosync (alter (.state pe) (fn [old-state] (assoc old-state property value))))))
 
 (defmacro def-pe-getters
   ([pe-id attrs]
@@ -36,6 +64,14 @@
        (do
        `(defn ~(symbol (str "m_" pe-id "_output")) [this#]
           (~output-fn this#))))))
+
+(defmacro def-pe-post-init
+  ([pe-id postinit-fn]
+     (if (not (nil? postinit-fn))
+       `(defn ~(symbol (str "m_" pe-id "_afterPropertiesSet")) [this#]
+          (~postinit-fn this#))
+       `(defn ~(symbol (str "m_" pe-id "_afterPropertiesSet")) [this#]
+          :nil))))
 
 (defmacro def-initializer
   ([pe-id]
@@ -61,6 +97,7 @@
            methods (apply hash-map methods)]
        `(do
           (def-initializer ~pe-id)
+          (def-pe-post-init ~pe-id ~(:init methods))
           (def-pe-getters ~pe-id ~state)
           (def-pe-setters ~pe-id ~state)
           (def-pe-proces-events ~pe-id ~(:process-event methods))
@@ -70,6 +107,7 @@
            :prefix ~(str "m_" pe-id "_")
            :init ~(symbol  "initialize")
            :extends io.s4.processor.AbstractPE
+           :implements [org.springframework.beans.factory.InitializingBean]
            :state ~'state
            :methods ~(methods-desc state methods)
            )))))
@@ -241,11 +279,19 @@
   "Transforms a message object into a Clojure map"
   ([msg]
      (reduce (fn [ac g]
-               (let [gk (.toLowerCase (aget (.split g ".get") 1))
+               (let [gk (minimalize (aget (.split g ".get") 1))
                      method (first (filter (fn [m] (= (.getName m) gk)) (.getMethods (.getClass msg))))]
                  (assoc ac (keyword gk) (.invoke method msg nil))))
              {}
              (.toMap msg))))
+
+(defn seq-to-array-list
+  "Serializes a clojure seq into a java ArrayList that can be serialized using Kryo"
+  ([xs]
+     (let [al (java.util.ArrayList.)]
+       (doseq [x xs]
+         (.add al x))
+       al)))
 
 (defmacro def-pe-plain-getters
   ([pe-id attrs]
@@ -259,12 +305,12 @@
            (map (fn [attr] (if (coll? attr) (let [[type attr-name] attr]
                                              [(symbol (str "get" (capitalize (name attr-name)))) [] type])
                               [(symbol (str "get" (capitalize (name attr)))) [] 'Object]))
-                (filter (partial not= :id) attributes))
+                attributes)
 
            (map (fn [attr] (if (coll? attr) (let [[type attr-name] attr]
                                              [(symbol (name attr-name)) [] type])
                               [(symbol (name attr)) [] 'Object]))
-                (filter (partial not= :id) attributes))
+                attributes)
 
            (map (fn [attr] (if (coll? attr)
                             (let [[type attr-name] attr]
@@ -283,7 +329,7 @@
           (def-message-getters ~pe-id ~components)
           (def-message-setters ~pe-id ~components)
           (def-message-to-map ~pe-id ~components)
-          (gen-class
+          (gen-mutable-class
            :name ~name
            :prefix ~(str "m_" pe-id "_")
            :init ~(symbol  "initialize")

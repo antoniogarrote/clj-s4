@@ -105,6 +105,30 @@
          (do (register-wiring (:id args) (fn [] bean-map)) bean-map))
        (throw (Exception. "Missing :id or :class arguments")))))
 
+(defn wire-join-bean
+  ([args]
+     (if (reduce (fn [ac v] (and ac v)) true
+                 (map (fn [k] (not (empty?
+                                   (filter (fn [p] (= p k))
+                                           (keys args)))))
+                      [:id :keys :include-fields :output-stream :output-class]))
+       (let [bean-map [:bean {:id (:id args) :class "io.s4.processor.JoinPE"}
+                       [:property {:name "keys"}
+                        [:list
+                         (map (fn [key] [:value key]) (:keys args))]]
+                       [:property {:name "includeFields"}
+                        [:list
+                         (map (fn [field] [:value field]))]]
+                       [:property {:name "outputStreamName" :value (:output-stream args)}]
+                       [:property {:name "outputClassName" :value (str (:output-class args))}]
+                       (when (not (nil? (:properties args)))
+                         (map (fn [p] (let [name (:name p)
+                                           value (:value p)
+                                           ref (:ref p)]
+                                       [:property {:name name (if (nil? value) :ref :value) (if (nil? value) ref value)}]))
+                              (:properties args)))]]
+         (do (register-wiring (:id args) (fn [] bean-map)) bean-map))
+       (throw (Exception. "Missing :id, :keys, :include-fields, :otput-stream or :output-class arguments")))))
 
 (defn wire-app
   ([name & ids]
