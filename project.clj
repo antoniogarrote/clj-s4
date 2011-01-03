@@ -1,4 +1,4 @@
-(defproject clj-s4 "0.2.1.1-SNAPSHOT"
+(defproject clj-s4 "0.2.1.2-SNAPSHOT"
   :description "A library to build Yahoo S4 applications using Clojure"
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]

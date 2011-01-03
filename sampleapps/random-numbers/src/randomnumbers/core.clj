@@ -31,6 +31,6 @@
           (loop [num (int (Math/floor (* (rand) 100)))]
             (generate-event this
                             (read-state this :stream)
-                            (cljs4.Number. {:num num}) [(mod num 10)])
+                            (cljs4.Number. {:num num}))
             (Thread/sleep 3000)
             (recur (int (Math/floor (* (rand) 100)))))))

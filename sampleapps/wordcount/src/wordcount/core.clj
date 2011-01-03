@@ -69,6 +69,7 @@
   :init (fn [this]
           (let [acum {}]
             (write-state this :acum acum)))
+
   :process-event [[Object] (fn [this token]
                              (let [token-map (msg-to-map token)]
                                (write-state this :textId (:textId token-map))
@@ -101,7 +102,7 @@
 
   :run (fn [this]
          (loop [text (random-text)]
-           (generate-event this (:stream (deref (.state this))) (cljs4.Text. {:content text :id (gen-uuid)}) [(read-state this :stream)])
+           (generate-event this (:stream (deref (.state this))) (cljs4.Text. {:content text :id (gen-uuid)}))
            (Thread/sleep 10000)
            (recur (random-text)))))
 

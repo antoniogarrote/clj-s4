@@ -182,11 +182,10 @@
    Arguments:
    - adapter: the adapter object
    - stream : a string containing the name of the stream where the event will be inserted
-   - event:   a object containing data for the event
-   - keys:    a list of keys for the event"
-  ([adapter stream event keys]
+   - event:   a object containing data for the event"
+  ([adapter stream event]
      (let [handlers (:handlers (deref (.state adapter)))
-           wrapper (io.s4.collector.EventWrapper. stream event keys)]
+           wrapper (io.s4.collector.EventWrapper. stream event nil)]
        (doseq [handler handlers]
          (try
            (.processEvent handler wrapper)
